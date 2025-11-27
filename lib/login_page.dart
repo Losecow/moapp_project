@@ -1,8 +1,59 @@
 import 'package:flutter/material.dart';
 import 'info_page.dart'; // 1. 새로 만든 페이지 import
+import 'services/auth_service.dart';
 
-class ResponsiveLoginPage extends StatelessWidget {
+class ResponsiveLoginPage extends StatefulWidget {
   const ResponsiveLoginPage({super.key});
+
+  @override
+  State<ResponsiveLoginPage> createState() => _ResponsiveLoginPageState();
+}
+
+class _ResponsiveLoginPageState extends State<ResponsiveLoginPage> {
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
+
+  // 구글 로그인 처리
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final userCredential = await _authService.signInWithGoogle();
+      
+      if (userCredential != null && mounted) {
+        // 로그인 성공 시 InfoPage로 이동
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const InfoPage()),
+        );
+      } else if (mounted) {
+        // 사용자가 로그인을 취소한 경우
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('로그인이 취소되었습니다.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('로그인 중 오류가 발생했습니다: ${e.toString()}'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +172,11 @@ class ResponsiveLoginPage extends StatelessWidget {
           // 4. context를 _buildLoginButton에 전달
           _buildLoginButton(context),
           SizedBox(height: screenSize.height * 0.02),
-          _buildSocialButton(text: 'Google 로 시작하기'),
+          _buildSocialButton(
+            text: 'Google 로 시작하기',
+            onPressed: _isLoading ? null : _handleGoogleSignIn,
+            isLoading: _isLoading,
+          ),
           SizedBox(height: screenSize.height * 0.015),
           _buildSocialButton(text: '카카오로 시작하기'),
         ],
@@ -207,12 +262,16 @@ class ResponsiveLoginPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSocialButton({required String text}) {
+  Widget _buildSocialButton({
+    required String text,
+    VoidCallback? onPressed,
+    bool isLoading = false,
+  }) {
     return SizedBox(
       width: double.infinity,
       height: 48,
       child: ElevatedButton(
-        onPressed: () {},
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: Colors.grey[700],
@@ -221,11 +280,21 @@ class ResponsiveLoginPage extends StatelessWidget {
             side: BorderSide(color: Colors.grey[300]!),
           ),
           elevation: 0,
+          disabledBackgroundColor: Colors.grey[200],
         ),
-        child: Text(
-          text,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+                ),
+              )
+            : Text(
+                text,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
       ),
     );
   }
