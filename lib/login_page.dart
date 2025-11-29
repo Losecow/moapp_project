@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'info_page.dart'; // 1. 새로 만든 페이지 import
+import 'school_info_page.dart';
 import 'services/auth_service.dart';
 
 class ResponsiveLoginPage extends StatefulWidget {
@@ -49,10 +49,10 @@ class _ResponsiveLoginPageState extends State<ResponsiveLoginPage> {
       final userCredential = await _authService.signInWithGoogle();
       
       if (userCredential != null && mounted) {
-        // 로그인 성공 시 InfoPage로 이동
+        // 로그인 성공 시 SchoolInfoPage로 이동
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const InfoPage()),
+          MaterialPageRoute(builder: (context) => const SchoolInfoPage()),
         );
       } else if (mounted) {
         // 사용자가 로그인을 취소한 경우
@@ -266,7 +266,7 @@ class _ResponsiveLoginPageState extends State<ResponsiveLoginPage> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const InfoPage()),
+            MaterialPageRoute(builder: (context) => const SchoolInfoPage()),
           );
         },
         style: ElevatedButton.styleFrom(

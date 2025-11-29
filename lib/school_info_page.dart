@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'profile_info_page.dart';
+import 'profile_setting_page.dart';
+import 'services/firestore_service.dart';
 
 class SchoolInfoPage extends StatefulWidget {
   const SchoolInfoPage({super.key});
@@ -12,6 +13,9 @@ class _SchoolInfoPageState extends State<SchoolInfoPage> {
   // 드롭다운 메뉴에서 선택된 값을 저장하기 위한 변수
   String? _selectedSchool;
   String? _selectedMajor;
+  bool _isSaving = false;
+
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   Widget build(BuildContext context) {
@@ -184,13 +188,75 @@ class _SchoolInfoPageState extends State<SchoolInfoPage> {
         ),
       ),
       child: ElevatedButton(
-        // 2. onPressed에 페이지 이동 코드 추가
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ProfileInfoPage()),
-          );
-        },
+        // 학교 / 전공 정보 저장 후 다음 페이지로 이동
+        onPressed: _isSaving
+            ? null
+            : () async {
+                print('🔵 Next 버튼 클릭됨');
+                print('   - 선택된 학교: $_selectedSchool');
+                print('   - 선택된 전공: $_selectedMajor');
+                
+                if (_selectedSchool == null || _selectedMajor == null) {
+                  print('⚠️ 학교 또는 전공이 선택되지 않음');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('학교와 전공을 모두 선택해주세요.'),
+                        duration: Duration(seconds: 2),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
+                  return;
+                }
+
+                print('💾 Firestore 저장 시작...');
+                setState(() {
+                  _isSaving = true;
+                });
+
+                try {
+                  await _firestoreService.upsertSchoolInfo(
+                    school: _selectedSchool!,
+                    major: _selectedMajor!,
+                  );
+
+                  print('✅ Firestore 저장 성공!');
+                  
+                  if (!mounted) {
+                    print('⚠️ 위젯이 unmount됨');
+                    return;
+                  }
+
+                  print('➡️ ProfileInfoPage로 이동');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileSettingPage(),
+                    ),
+                  );
+                } catch (e, stackTrace) {
+                  print('❌ Firestore 저장 실패: $e');
+                  print('❌ Stack trace: $stackTrace');
+                  
+                  if (!mounted) return;
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('학교 정보 저장 중 오류가 발생했습니다: ${e.toString()}'),
+                      duration: const Duration(seconds: 4),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                } finally {
+                  if (mounted) {
+                    setState(() {
+                      _isSaving = false;
+                    });
+                    print('🔄 _isSaving을 false로 설정');
+                  }
+                }
+              },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
